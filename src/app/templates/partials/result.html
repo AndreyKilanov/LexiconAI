@@ -1,0 +1,64 @@
+<div class="flex flex-col items-end fade-in mb-4">
+    <!-- User Message -->
+    <div class="bg-blue-600 text-white px-4 py-2 rounded-2xl rounded-tr-none max-w-[85%] shadow-md mb-2 self-end">
+        {{ original_text }}
+    </div>
+
+    <!-- AI Response -->
+    <div
+        class="bg-gray-700/80 text-gray-200 p-4 rounded-2xl rounded-tl-none max-w-[90%] shadow-lg self-start border border-gray-600 w-full">
+
+        {% if error %}
+        <div class="text-red-400 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            </svg>
+            <span>Ошибка: {{ error }}</span>
+        </div>
+        {% else %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <!-- Synonyms -->
+            <div class="bg-gray-800/50 rounded-xl p-3 border border-gray-600/50">
+                <h3 class="text-green-400 font-medium mb-2 flex items-center gap-2 text-sm uppercase tracking-wider">
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                    Синонимы
+                </h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for item in result %}
+                    {% if item.type == 'synonym' or item.type.value == 'synonym' %}
+                    <span
+                        class="bg-green-500/10 text-green-300 px-2 py-1 rounded-md text-sm border border-green-500/20 hover:bg-green-500/20 transition-colors cursor-default">
+                        {{ item.word }}
+                    </span>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Antonyms -->
+            <div class="bg-gray-800/50 rounded-xl p-3 border border-gray-600/50">
+                <h3 class="text-red-400 font-medium mb-2 flex items-center gap-2 text-sm uppercase tracking-wider">
+                    <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                    Антонимы
+                </h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for item in result %}
+                    {% if item.type == 'antonym' or item.type.value == 'antonym' %}
+                    <span
+                        class="bg-red-500/10 text-red-300 px-2 py-1 rounded-md text-sm border border-red-500/20 hover:bg-red-500/20 transition-colors cursor-default">
+                        {{ item.word }}
+                    </span>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+
+        {% endif %}
+    </div>
+</div>

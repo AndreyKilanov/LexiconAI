@@ -1,0 +1,108 @@
+version: '3.9'
+
+services:
+  # Основное API приложение
+  app:
+    build:
+      context: .
+      target: runtime
+    container_name: lexicon_app
+    restart: always
+    environment:
+      - APP_ENV=${APP_ENV:-production}
+      - DB_HOST=${DB_HOST:-db}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:-lexicon}
+      - APP_PORT=${APP_PORT:-8000}
+      - RUN_MODE=app
+      - ADMIN_CHAT_ID=${ADMIN_CHAT_ID}
+    env_file:
+      - .env
+    expose:
+      - "${APP_PORT:-8000}"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - migrations_versions:/app/src/infrastructure/db/migrations/versions
+    networks:
+      - lexicon_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:stable-alpine
+    container_name: lexicon_nginx
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    volumes:
+      - ./nginx/lexicon.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./src/app/static:/app/src/app/static:ro
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+      - APP_PORT=${APP_PORT:-8000}
+    depends_on:
+      - app
+    networks:
+      - lexicon_network
+    restart: always
+
+  # Телеграм бот
+  bot:
+    build:
+      context: .
+      target: runtime
+    container_name: lexicon_bot
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=${DB_HOST:-db}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:-lexicon}
+      - RUN_MODE=bot
+      - ADMIN_CHAT_ID=${ADMIN_CHAT_ID}
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    volumes:
+      - migrations_versions:/app/src/infrastructure/db/migrations/versions
+    networks:
+      - lexicon_network
+
+  # База данных PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: lexicon_db
+    restart: always
+    environment:
+      - POSTGRES_DB=${DB_NAME:-lexicon}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${DB_USER:-postgres} -d $${DB_NAME:-lexicon}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lexicon_network
+
+networks:
+  lexicon_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  migrations_versions:
